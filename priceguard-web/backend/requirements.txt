@@ -1,0 +1,15 @@
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+pydantic>=2.7.0
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+lxml>=5.0.0
+python-dotenv>=1.0.0
+matplotlib>=3.8.0
+
+# Optional (JS-rendered pages / SeleniumScraper)
+selenium>=4.18.0
+webdriver-manager>=4.0.0
+
+# Optional (SMS alerts)
+twilio>=9.0.0
