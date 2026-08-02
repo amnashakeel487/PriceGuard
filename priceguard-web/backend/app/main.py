@@ -23,11 +23,21 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# The React dev server (Vite) runs on a different port, so it needs CORS.
-allowed_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",")
+# Parse allowed origins from env var
+cors_origins_env = os.getenv("CORS_ORIGINS", "")
+if cors_origins_env.strip() == "*":
+    allowed_origins = ["*"]
+else:
+    allowed_origins = [
+        o.strip().rstrip("/")
+        for o in cors_origins_env.split(",")
+        if o.strip()
+    ] or ["http://localhost:5173", "http://127.0.0.1:5173"]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",  # allow all Vercel preview URLs
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
