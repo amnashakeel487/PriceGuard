@@ -110,10 +110,16 @@ class AlertManager:
         )
         message.attach(MIMEText(body, "plain"))
         try:
-            with smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=15) as server:
-                server.starttls()
-                server.login(self.sender_email, self.sender_password)
-                server.send_message(message)
+            port = self.smtp_port
+            if port == 465:
+                with smtplib.SMTP_SSL(self.smtp_server, port, timeout=15) as server:
+                    server.login(self.sender_email, self.sender_password)
+                    server.send_message(message)
+            else:
+                with smtplib.SMTP(self.smtp_server, port, timeout=15) as server:
+                    server.starttls()
+                    server.login(self.sender_email, self.sender_password)
+                    server.send_message(message)
         except smtplib.SMTPException as exc:
             raise AlertError(f"Failed to send verification email: {exc}") from exc
 
@@ -172,10 +178,16 @@ class AlertManager:
                 message.attach(image)
 
         try:
-            with smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=15) as server:
-                server.starttls()
-                server.login(self.sender_email, self.sender_password)
-                server.send_message(message)
+            port = self.smtp_port
+            if port == 465:
+                with smtplib.SMTP_SSL(self.smtp_server, port, timeout=15) as server:
+                    server.login(self.sender_email, self.sender_password)
+                    server.send_message(message)
+            else:
+                with smtplib.SMTP(self.smtp_server, port, timeout=15) as server:
+                    server.starttls()
+                    server.login(self.sender_email, self.sender_password)
+                    server.send_message(message)
         except smtplib.SMTPException as exc:
             raise AlertError(f"Failed to send email: {exc}") from exc
 
