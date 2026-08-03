@@ -293,9 +293,13 @@ App available at: `http://localhost:5173`
 
 ---
 
-## 👩‍💻 Authors
+## 👩‍💻 Author
 
-Built with ❤️ using Python & React.
+**Amna Shakeel**
+🐍 Python Developer · 🌐 Full Stack Web Developer · 🤖 Automation Engineer
+
+[![GitHub](https://img.shields.io/badge/GitHub-amnashakeel487-181717?style=flat&logo=github)](https://github.com/amnashakeel487)
+[![Email](https://img.shields.io/badge/Email-amnashakeel606@gmail.com-D14836?style=flat&logo=gmail&logoColor=white)](mailto:amnashakeel606@gmail.com)
 
 ---
 
