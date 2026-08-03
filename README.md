@@ -29,7 +29,8 @@ PriceGuard is a full-stack, production-deployed web application that automates t
 
 # Email sent successfully
 
-<img width="1918" height="967" alt="image" src="https://github.com/user-attachments/assets/b88beb62-9c96-41b6-bb30-d14625a79cc7" />
+<img width="261" height="538" alt="image" src="https://github.com/user-attachments/assets/beadb06f-2d80-44fc-a0eb-31339a61313d" />
+
 
 
 ## ✨ Features
