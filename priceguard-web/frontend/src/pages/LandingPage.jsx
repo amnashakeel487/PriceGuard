@@ -13,7 +13,7 @@ const FEATURES = [
   { icon: Globe,        title: "Multi-website support", desc: "Amazon, eBay, Walmart, Best Buy, and hundreds more, all in one place." },
 ];
 
-const priceHistory = [349,342,335,328,312,305,298];
+const priceHistory = [34900,34200,33500,32800,31200,30500,29899];
 
 function SparklineCard() {
   const W = 320, H = 120;
@@ -32,8 +32,8 @@ function SparklineCard() {
         <div>
           <p className="text-[13px] font-medium" style={{ color: "var(--text-muted)" }}>Sony WH-1000XM5</p>
           <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-[28px] font-bold text-white">$298.99</span>
-            <span className="text-[13px] line-through" style={{ color: "var(--text-muted)" }}>$349.99</span>
+            <span className="text-[28px] font-bold text-white">Rs. 29,899</span>
+            <span className="text-[13px] line-through" style={{ color: "var(--text-muted)" }}>Rs. 34,999</span>
             <span className="flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold"
               style={{ backgroundColor: "rgba(16,185,129,0.12)", color: "var(--emerald-light)" }}>
               <TrendingDown size={11} /> 14.6%
@@ -57,8 +57,8 @@ function SparklineCard() {
           </defs>
           <polygon points={area} fill="url(#lgFill)" />
           <polyline points={pts} fill="none" stroke="#818cf8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-          <line x1="0" y1={y(250)} x2={W} y2={y(250)} stroke="#10b981" strokeWidth="1.5" strokeDasharray="6 4" />
-          <text x="6" y={y(250)-5} fontSize="9" fill="#34d399">Target $250</text>
+          <line x1="0" y1={y(25000)} x2={W} y2={y(25000)} stroke="#10b981" strokeWidth="1.5" strokeDasharray="6 4" />
+          <text x="6" y={y(25000)-5} fontSize="9" fill="#34d399">Target Rs.25,000</text>
         </svg>
       </div>
 
@@ -71,12 +71,12 @@ function SparklineCard() {
           </div>
           <div>
             <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>Money saved</p>
-            <p className="text-[14px] font-bold" style={{ color: "var(--emerald-light)" }}>$1,284.50</p>
+            <p className="text-[14px] font-bold" style={{ color: "var(--emerald-light)" }}>Rs. 1,28,450</p>
           </div>
         </div>
         <div className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium"
           style={{ backgroundColor: "rgba(16,185,129,0.10)", color: "var(--teal-light)" }}>
-          <Target size={11} /> 250 — close! <ArrowRight size={10} />
+          <Target size={11} /> Rs.25,000 — close! <ArrowRight size={10} />
         </div>
       </div>
     </div>
@@ -152,7 +152,7 @@ export default function LandingPage() {
           <div className="mt-10 flex flex-wrap items-center gap-6 text-[13px]" style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "1.5rem", color: "var(--text-muted)" }}>
             <div><span className="font-bold text-white">12,400+</span> products tracked</div>
             <div className="h-4 w-px" style={{ backgroundColor: "rgba(255,255,255,0.10)" }} />
-            <div><span className="font-bold text-white">$2.1M</span> saved by users</div>
+            <div><span className="font-bold text-white">Rs. 2.1Cr+</span> saved by users</div>
           </div>
         </motion.div>
 
@@ -166,11 +166,11 @@ export default function LandingPage() {
             style={{ backgroundColor: "rgba(15,22,41,0.92)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(20px)" }}>
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg" style={{ backgroundColor: "rgba(16,185,129,0.15)" }}>
-                <span style={{ color: "var(--emerald-light)" }}>$</span>
+                <span style={{ color: "var(--emerald-light)" }}>Rs.</span>
               </div>
               <div>
                 <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>Money saved</p>
-                <p className="text-[14px] font-bold text-white">$1,284.50</p>
+                <p className="text-[14px] font-bold text-white">Rs. 1,28,450</p>
               </div>
             </div>
           </motion.div>
