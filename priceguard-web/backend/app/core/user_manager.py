@@ -88,7 +88,7 @@ class UserManager:
         email = email.strip().lower()
         existing = self._find_user(email)
         if existing and existing.verified:
-            return False, "This email is already registered. Please log in."
+            return False, "ALREADY_VERIFIED"  # special code frontend can redirect to /login
         salt = self._make_salt()
         pw_hash = self._hash_password(salt, password)
         otp = self._generate_otp()

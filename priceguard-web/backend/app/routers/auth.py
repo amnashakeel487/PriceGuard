@@ -29,6 +29,11 @@ class LoginIn(BaseModel):
 def register(payload: RegisterIn):
     ok, result = user_manager.register(payload.email, payload.password)
     if not ok:
+        if result == "ALREADY_VERIFIED":
+            raise HTTPException(
+                status_code=409,
+                detail="This email is already registered. Please sign in instead."
+            )
         raise HTTPException(status_code=409, detail=result)
     # Send OTP email
     try:

@@ -28,7 +28,15 @@ export default function RegisterPage() {
       await api.auth.register(email.trim(), password);
       navigate("/verify", { state: { email: email.trim() } });
     } catch (err) {
-      setServerError(err instanceof ApiError && err.status === 409 ? err.message : "Registration failed. Please try again.");
+      if (err instanceof ApiError && err.status === 409) {
+        if (err.message.includes("already registered")) {
+          setServerError("already_registered");
+        } else {
+          setServerError(err.message);
+        }
+      } else {
+        setServerError("Registration failed. Please try again.");
+      }
     } finally { setLoading(false); }
   }
 
@@ -47,10 +55,18 @@ export default function RegisterPage() {
             value={password} onChange={(e) => { setPassword(e.target.value); setErrors((p) => ({ ...p, password: "" })); }} />
           {errors.password && <p className="mt-1 text-[11.5px]" style={{ color: "var(--rose)" }}>{errors.password}</p>}
         </div>
-        {serverError && (
+        {serverError && serverError !== "already_registered" && (
           <p className="rounded-lg px-3 py-2.5 text-[12.5px]" style={{ backgroundColor: "var(--rose-tint)", color: "var(--rose)" }}>
             {serverError}
           </p>
+        )}
+        {serverError === "already_registered" && (
+          <div className="rounded-lg px-3 py-2.5 text-[12.5px]" style={{ backgroundColor: "var(--violet-tint)", color: "var(--indigo-light)" }}>
+            This email is already registered.{" "}
+            <Link to="/login" className="font-semibold underline" style={{ color: "var(--indigo-light)" }}>
+              Sign in instead →
+            </Link>
+          </div>
         )}
         <button type="submit" className="btn-primary mt-1 w-full" disabled={loading}>
           {loading && <Loader2 size={15} className="animate-spin" />}
