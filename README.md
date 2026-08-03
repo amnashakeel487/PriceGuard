@@ -23,6 +23,9 @@ PriceGuard is a full-stack, production-deployed web application that automates t
 
 ---
 
+<img width="1917" height="972" alt="image" src="https://github.com/user-attachments/assets/ecf40036-3ac9-4380-82b3-d693d9c37ba1" />
+
+
 ## ✨ Features
 
 | Feature | Description |
