@@ -1,13 +1,37 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request, Response
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 from ..deps import alert_manager, user_manager
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 SESSION_COOKIE = "pg_user"
+
+
+def _set_session_cookie(response: Response, email: str) -> None:
+    """Set the session cookie with cross-origin safe settings.
+    
+    SameSite=None + Secure=True is required when the frontend (Vercel)
+    and backend (Railway) are on different domains.
+    """
+    response.set_cookie(
+        key=SESSION_COOKIE,
+        value=email,
+        httponly=True,
+        secure=True,        # HTTPS only — required for SameSite=None
+        samesite="none",    # Allow cross-origin requests to send the cookie
+        max_age=60 * 60 * 24 * 30,  # 30 days
+    )
+
+
+def _delete_session_cookie(response: Response) -> None:
+    response.delete_cookie(
+        key=SESSION_COOKIE,
+        secure=True,
+        samesite="none",
+    )
 
 
 class RegisterIn(BaseModel):
@@ -30,18 +54,13 @@ def register(payload: RegisterIn):
     ok, result = user_manager.register(payload.email, payload.password)
     if not ok:
         if result == "ALREADY_VERIFIED":
-            raise HTTPException(
-                status_code=409,
-                detail="This email is already registered. Please sign in instead."
-            )
+            raise HTTPException(status_code=409, detail="This email is already registered. Please sign in instead.")
         raise HTTPException(status_code=409, detail=result)
-    # Send OTP email
     try:
         alert_manager.send_verification_email(payload.email.strip().lower(), result)
-    except Exception as exc:
-        # Still return success but warn — user can resend
-        return {"message": "Registered. Warning: could not send verification email. Check your .env email settings.", "email": payload.email.strip().lower()}
-    return {"message": "Verification code sent to your email. Please check your inbox.", "email": payload.email.strip().lower()}
+    except Exception:
+        return {"message": "Registered. Warning: could not send verification email. Check your email settings.", "email": payload.email.strip().lower()}
+    return {"message": "Verification code sent to your email.", "email": payload.email.strip().lower()}
 
 
 class ResendOtpIn(BaseModel):
@@ -65,7 +84,7 @@ def verify(payload: VerifyIn, response: Response):
     ok, msg = user_manager.verify_otp(payload.email, payload.otp)
     if not ok:
         raise HTTPException(status_code=400, detail=msg)
-    response.set_cookie(SESSION_COOKIE, payload.email.strip().lower(), httponly=True, samesite="lax", max_age=60 * 60 * 24 * 30)
+    _set_session_cookie(response, payload.email.strip().lower())
     return {"message": msg, "email": payload.email.strip().lower()}
 
 
@@ -75,7 +94,7 @@ def login(payload: LoginIn, response: Response):
     if not ok:
         raise HTTPException(status_code=401, detail=msg)
     email = payload.email.strip().lower()
-    response.set_cookie(SESSION_COOKIE, email, httponly=True, samesite="lax", max_age=60 * 60 * 24 * 30)
+    _set_session_cookie(response, email)
     return {"message": msg, "email": email}
 
 
@@ -112,5 +131,5 @@ def change_password(payload: ChangePasswordIn, request: Request):
 
 @router.post("/logout")
 def logout(response: Response):
-    response.delete_cookie(SESSION_COOKIE)
+    _delete_session_cookie(response)
     return {"message": "Logged out."}
