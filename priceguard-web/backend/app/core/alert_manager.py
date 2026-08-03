@@ -1,21 +1,20 @@
 """
-AlertManager: sends Email (SMTP via Brevo) notifications.
+AlertManager: sends email notifications via Brevo HTTPS API (no SMTP needed).
 
-Brevo SMTP credentials are read from environment variables:
-  SMTP_SERVER   = smtp-relay.brevo.com
-  SMTP_PORT     = 587
-  EMAIL_SENDER  = your sending address
-  EMAIL_PASSWORD= your Brevo SMTP key
-  BREVO_LOGIN   = your Brevo account email (used as SMTP username)
+Required environment variables:
+  BREVO_API_KEY  = your Brevo API key (xkeysib-...)
+  EMAIL_SENDER   = the verified sender email in your Brevo account
+
+Optional (falls back to EMAIL_SENDER if not set):
+  EMAIL_RECEIVER = default recipient for price-drop alerts
 """
 
 from __future__ import annotations
 
+import json
 import os
-import smtplib
-from email.mime.image import MIMEImage
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+import urllib.request
+import urllib.error
 from typing import List, Optional, Tuple
 
 import matplotlib
@@ -33,15 +32,13 @@ except ImportError:
 
 
 class AlertManager:
+    BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
+
     def __init__(self) -> None:
-        self.smtp_server   = os.getenv("SMTP_SERVER",   "smtp-relay.brevo.com")
-        self.smtp_port     = int(os.getenv("SMTP_PORT", "587"))
-        self.sender_email  = os.getenv("EMAIL_SENDER")
-        self.sender_password = os.getenv("EMAIL_PASSWORD")
-        # Brevo uses your account email as the SMTP *login* username.
-        # Set BREVO_LOGIN to your Brevo account email if it differs from EMAIL_SENDER.
-        self.smtp_login    = os.getenv("BREVO_LOGIN", self.sender_email)
-        self.receiver_email = os.getenv("EMAIL_RECEIVER", self.sender_email)
+        self.brevo_api_key   = os.getenv("BREVO_API_KEY", "")
+        self.sender_email    = os.getenv("EMAIL_SENDER", "")
+        self.sender_name     = os.getenv("EMAIL_SENDER_NAME", "PriceGuard")
+        self.receiver_email  = os.getenv("EMAIL_RECEIVER", self.sender_email)
 
         self.twilio_sid         = os.getenv("TWILIO_SID")
         self.twilio_auth_token  = os.getenv("TWILIO_AUTH_TOKEN")
@@ -49,29 +46,44 @@ class AlertManager:
         self.twilio_to_number   = os.getenv("TWILIO_TO_NUMBER")
 
     # ------------------------------------------------------------------ #
-    # Internal SMTP helper — used by both email methods below
+    # Internal: send via Brevo HTTPS API
     # ------------------------------------------------------------------ #
-    def _send_smtp(self, message: MIMEMultipart) -> None:
-        """Connect to SMTP, authenticate with Brevo credentials, send message."""
-        if not self.sender_email or not self.sender_password:
+    def _send_brevo(self, to_email: str, subject: str, text_content: str) -> None:
+        """Send email through Brevo REST API — works on all hosting platforms."""
+        if not self.brevo_api_key:
             raise AlertError(
-                "EMAIL_SENDER / EMAIL_PASSWORD are not set in environment variables."
+                "BREVO_API_KEY is not set. "
+                "Get a free API key at https://app.brevo.com/settings/keys/api"
             )
-        login = self.smtp_login or self.sender_email
+        if not self.sender_email:
+            raise AlertError("EMAIL_SENDER is not set.")
+
+        payload = json.dumps({
+            "sender":   {"name": self.sender_name, "email": self.sender_email},
+            "to":       [{"email": to_email}],
+            "subject":  subject,
+            "textContent": text_content,
+        }).encode("utf-8")
+
+        req = urllib.request.Request(
+            self.BREVO_API_URL,
+            data=payload,
+            headers={
+                "accept":       "application/json",
+                "api-key":      self.brevo_api_key,
+                "content-type": "application/json",
+            },
+            method="POST",
+        )
         try:
-            if self.smtp_port == 465:
-                with smtplib.SMTP_SSL(self.smtp_server, self.smtp_port, timeout=15) as s:
-                    s.login(login, self.sender_password)
-                    s.send_message(message)
-            else:
-                with smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=15) as s:
-                    s.ehlo()
-                    s.starttls()
-                    s.ehlo()
-                    s.login(login, self.sender_password)
-                    s.send_message(message)
-        except smtplib.SMTPException as exc:
-            raise AlertError(f"SMTP error: {exc}") from exc
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                if resp.status not in (200, 201):
+                    raise AlertError(f"Brevo API returned status {resp.status}")
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace")
+            raise AlertError(f"Brevo API error {exc.code}: {body}") from exc
+        except urllib.error.URLError as exc:
+            raise AlertError(f"Network error sending email: {exc.reason}") from exc
 
     # ------------------------------------------------------------------ #
     # Helpers
@@ -103,13 +115,10 @@ class AlertManager:
         return output_path
 
     # ------------------------------------------------------------------ #
-    # 1. OTP verification email  (sent on register / resend-otp)
+    # 1. OTP verification email
     # ------------------------------------------------------------------ #
     def send_verification_email(self, email: str, otp: str) -> None:
-        msg = MIMEMultipart()
-        msg["From"]    = self.sender_email
-        msg["To"]      = email
-        msg["Subject"] = "🔐 PriceGuard - Your Verification Code"
+        subject = "🔐 PriceGuard - Your Verification Code"
         body = (
             f"Welcome to PriceGuard!\n\n"
             f"Your email verification code is:\n\n"
@@ -118,11 +127,10 @@ class AlertManager:
             f"If you didn't register for PriceGuard, you can safely ignore this email.\n\n"
             f"— The PriceGuard Team"
         )
-        msg.attach(MIMEText(body, "plain"))
-        self._send_smtp(msg)
+        self._send_brevo(email, subject, body)
 
     # ------------------------------------------------------------------ #
-    # 2. Price-drop alert email  (sent when product hits target price)
+    # 2. Price-drop alert email
     # ------------------------------------------------------------------ #
     def send_price_alert(
         self,
@@ -140,33 +148,18 @@ class AlertManager:
             else f"✅ Price Alert: {product.name[:60]} hit your target"
         )
         body = (
-            f"Good news! The product you're tracking has dropped below your target price.\n\n"
+            f"Good news! The product you're tracking dropped below your target price.\n\n"
             f"Product:        {product.name}\n"
             f"Current price:  Rs. {product.last_price:,.2f}\n"
             f"Target price:   Rs. {product.target_price:,.2f}\n"
-            f"Price drop:     {drop_pct}% (from highest recorded Rs. {product.highest_price:,.2f})\n"
+            f"Price drop:     {drop_pct}% (from highest Rs. {product.highest_price:,.2f})\n"
             f"Link:           {product.url}\n\n"
         )
         if big_drop:
-            body += "🚨 This is a significant drop of over 10%. Buy now!\n\n"
+            body += "🚨 Significant drop of over 10%. Act fast!\n\n"
         body += "— Sent automatically by PriceGuard"
 
-        msg = MIMEMultipart()
-        msg["From"]    = self.sender_email
-        msg["To"]      = to_email
-        msg["Subject"] = subject
-        msg.attach(MIMEText(body, "plain"))
-
-        # Attach price-history graph if enough data
-        if history:
-            graph_path = self.generate_price_graph(product, history)
-            if graph_path and os.path.exists(graph_path):
-                with open(graph_path, "rb") as f:
-                    img = MIMEImage(f.read())
-                    img.add_header("Content-Disposition", "attachment", filename="price_history.png")
-                    msg.attach(img)
-
-        self._send_smtp(msg)
+        self._send_brevo(to_email, subject, body)
 
     # ------------------------------------------------------------------ #
     # 3. SMS via Twilio (optional)
@@ -175,7 +168,7 @@ class AlertManager:
         if not TWILIO_AVAILABLE:
             raise AlertError("twilio package is not installed.")
         if not all([self.twilio_sid, self.twilio_auth_token, self.twilio_from_number, self.twilio_to_number]):
-            raise AlertError("Twilio credentials are missing from .env.")
+            raise AlertError("Twilio credentials missing from .env.")
         drop_pct = self.calculate_drop_percentage(product.highest_price, product.last_price)
         text = (
             f"PriceGuard: {product.name[:40]} dropped {drop_pct}% to "
